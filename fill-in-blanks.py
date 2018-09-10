@@ -1,5 +1,5 @@
 import re
-import sys
+import json
 
 def fill_in_blanks(input) :
     matches = []
@@ -14,6 +14,13 @@ def fill_in_blanks(input) :
     return matches
 
 def lambda_handler(event, context) :
-    return fill_in_blanks(event('pattern'))
-
-# print(fill_in_blanks(sys.argv[1]))
+    body = json.loads(event['body'])
+    matches = fill_in_blanks(body['pattern'])
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Content-type" : "application/json"
+        },
+        "body": json.dumps(matches),
+        "isBase64Encoded": False
+    };
