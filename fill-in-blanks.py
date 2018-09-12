@@ -15,8 +15,9 @@ def fill_in_blanks(input) :
 
 def lambda_handler(event, context) :
     body = json.loads(event['body'])
+    print("body : %s" %  body.keys())
     matches = fill_in_blanks(body['pattern'])
-    return {
+    response = {
         "statusCode": 200,
         "headers": {
             "Content-type" : "application/json"
@@ -24,3 +25,5 @@ def lambda_handler(event, context) :
         "body": json.dumps(matches),
         "isBase64Encoded": False
     };
+    return response
+
