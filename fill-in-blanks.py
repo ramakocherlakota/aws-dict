@@ -1,5 +1,4 @@
 import re
-import sys
 
 def fill_in_blanks(input) :
     matches = []
@@ -14,6 +13,5 @@ def fill_in_blanks(input) :
     return matches
 
 def lambda_handler(event, context) :
-    return fill_in_blanks(event('pattern'))
+    return fill_in_blanks(event['pattern'])
 
-# print(fill_in_blanks(sys.argv[1]))
