@@ -1,16 +1,15 @@
-$(".go").click(function(e) {
+$("#go").click(function(e) {
     var query = $("#query");
     var querytype = $('input[name=querytype]:checked').val();
     var url = "https://obbe7hxsnb.execute-api.us-east-1.amazonaws.com/Prod/" + querytype + "?pattern=" + query.val();
-
-    $.preloader.start();
+    var spinner = $('<div/>').css({'margin-left': '10px', 'display': 'inline-block', 'vertical-align': 'middle'}).insertAfter(this).preloader({src:'sprites.32.png'});
     $.ajax({
         type: "GET",
         url: url,
         accepts: "application/json",
         crossDomain: "true",
         success: function (data) {
-            $.preloader.stop();
+            spinner.preloader('stop');
             var results = $("#results");
             results.empty();
             var matches = data['matches'];
@@ -21,7 +20,7 @@ $(".go").click(function(e) {
         },
         error: function (request, status, errorThrown) {
             // show an error message
-            $.preloader.stop();
+            spinner.preloader('stop');
             alert("An error was encountered " + errorThrown);
         }});
 });
