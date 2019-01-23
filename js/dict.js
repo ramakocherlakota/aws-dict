@@ -1,14 +1,16 @@
-$(".go").on('click', function(e) {
+$(".go").click(function(e) {
     var query = $("#query");
     var querytype = $('input[name=querytype]:checked').val();
     var url = "https://obbe7hxsnb.execute-api.us-east-1.amazonaws.com/Prod/" + querytype + "?pattern=" + query.val();
+
+    $.preloader.start();
     $.ajax({
         type: "GET",
         url: url,
         accepts: "application/json",
         crossDomain: "true",
         success: function (data) {
-            // clear form and show a success message
+            $.preloader.stop();
             var results = $("#results");
             results.empty();
             var matches = data['matches'];
@@ -19,6 +21,7 @@ $(".go").on('click', function(e) {
         },
         error: function (request, status, errorThrown) {
             // show an error message
+            $.preloader.stop();
             alert("An error was encountered " + errorThrown);
         }});
 });
