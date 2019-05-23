@@ -1,3 +1,8 @@
+$("#clear").click(function(e) {
+    var query = $("#query");
+    query.val('').focus();
+});
+
 $("#go").click(function(e) {
     var query = $("#query");
     var querytype = $('input[name=querytype]:checked').val();
