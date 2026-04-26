@@ -6,3 +6,5 @@ for file in js/img/*
 do
     aws s3 cp --acl public-read $file s3://dict-rkocherl-net/$file
 done
+
+aws cloudfront create-invalidation --distribution-id EZIC25WGIBNK6 --paths "/*"

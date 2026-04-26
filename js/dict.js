@@ -6,7 +6,7 @@ $("#clear").click(function(e) {
 $("#go").click(function(e) {
     var query = $("#query");
     var querytype = $('input[name=querytype]:checked').val();
-    var url = "https://obbe7hxsnb.execute-api.us-east-1.amazonaws.com/Prod/" + querytype + "?pattern=" + query.val();
+    var url = "https://obbe7hxsnb.execute-api.us-east-1.amazonaws.com/Prod/" + querytype + "?pattern=" + query.val().replaceAll(" ", "+");
     var spinner = $('<div/>').css({'margin-left': '10px', 'display': 'inline-block', 'vertical-align': 'middle'}).insertAfter(this).preloader({src:'sprites.32.png'});
     $.ajax({
         type: "GET",
