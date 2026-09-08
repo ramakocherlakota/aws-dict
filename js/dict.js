@@ -6,8 +6,8 @@ $("#clear").click(function(e) {
 $("#go").click(function(e) {
     var query = $("#query");
     var querytype = $('input[name=querytype]:checked').val();
-    var pattern = query.val().replaceAll(" ", "+");
-    var url = "https://obbe7hxsnb.execute-api.us-east-1.amazonaws.com/Prod/" + querytype + "?pattern=" + pattern;
+    var pattern = query.val();
+    var url = "https://obbe7hxsnb.execute-api.us-east-1.amazonaws.com/Prod/" + querytype + "?pattern=" + encodeURIComponent(pattern);
     var spinner = $('<div/>').css({'margin-left': '10px', 'display': 'inline-block', 'vertical-align': 'middle'}).insertAfter(this).preloader({src:'sprites.32.png'});
     $.ajax({
         type: "GET",
@@ -28,7 +28,11 @@ $("#go").click(function(e) {
         error: function (request, status, errorThrown) {
             // show an error message
             spinner.preloader('stop');
-            alert("An error was encountered " + errorThrown);
+            var message = errorThrown;
+            if (request.responseJSON && request.responseJSON.error && request.responseJSON.error.message) {
+                message = request.responseJSON.error.message;
+            }
+            alert("An error was encountered " + message);
         }});
 });
 
