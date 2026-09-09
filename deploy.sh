@@ -1,3 +1,6 @@
+#!/bin/bash
+set -euo pipefail
+
 aws s3 cp --acl public-read index.html s3://dict.rkocherl.net/index.html
 aws s3 cp --acl public-read js/dict.js s3://dict.rkocherl.net/js/dict.js
 aws s3 cp --acl public-read js/LICENSE s3://dict.rkocherl.net/js/LICENSE
@@ -7,3 +10,4 @@ do
     aws s3 cp --acl public-read $file s3://dict.rkocherl.net/$file
 done
 
+aws cloudfront create-invalidation --distribution-id EZIC25WGIBNK6 --paths "/*"
