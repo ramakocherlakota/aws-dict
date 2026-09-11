@@ -3,6 +3,15 @@ $("#clear").click(function(e) {
     query.val('').focus();
 });
 
+$("#query").on("input", function(e) {
+    if (this.value.indexOf(" ") === -1) {
+        return;
+    }
+    var pos = this.selectionStart;
+    this.value = this.value.replace(/ /g, ".");
+    this.setSelectionRange(pos, pos);
+});
+
 $("#go").click(function(e) {
     var query = $("#query");
     var querytype = $('input[name=querytype]:checked').val();
