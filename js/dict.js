@@ -1,6 +1,7 @@
 $("#clear").click(function(e) {
     var query = $("#query");
     query.val('').focus();
+    $("#result-count").text('');
 });
 
 $("#query").on("input", function(e) {
@@ -29,6 +30,7 @@ $("#go").click(function(e) {
             var results = $("#results");
             results.empty();
             var matches = data['matches'];
+            $("#result-count").text(matches.length + " result" + (matches.length === 1 ? "" : "s"));
             for (var i=0; i<matches.length; i++) {
                 var word = matches[i];
                 results.append("<li class='list-group-item'><a href='http://www.google.com/search?q="+word+"' target='_blank'>" + word + "</a></li>");
@@ -37,6 +39,7 @@ $("#go").click(function(e) {
         error: function (request, status, errorThrown) {
             // show an error message
             spinner.preloader('stop');
+            $("#result-count").text('');
             var message = errorThrown;
             if (request.responseJSON && request.responseJSON.error && request.responseJSON.error.message) {
                 message = request.responseJSON.error.message;
