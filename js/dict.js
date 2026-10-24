@@ -9,6 +9,7 @@ $("#clear").click(function(e) {
     lastResults = null;
     showWordFilters();
     $("#result-filter").val('').hide();
+    $("#word-count").val("1");
     updateLengths();
     saveState();
 });
