@@ -2,6 +2,9 @@ $("#clear").click(function(e) {
     var query = $("#query");
     query.val('').focus();
     $("#result-count").text('');
+    included = [];
+    excluded = [];
+    showWordFilters();
     updateLengths();
 });
 
@@ -86,8 +89,103 @@ $("#go").click(function(e) {
         }
         url = "https://obbe7hxsnb.execute-api.us-east-1.amazonaws.com/Prod/multi-anagram?pattern=" + encodeURIComponent(pattern) +
             "&lengths=" + encodeURIComponent(lengths.join(","));
+        // words picked for one puzzle don't carry over to different letters or lengths
+        var key = pattern.toLowerCase().replace(/[^a-z]/g, "").split("").sort().join("") + "|" + lengths.join(",");
+        if (key !== searchKey) {
+            searchKey = key;
+            included = [];
+            excluded = [];
+        }
     }
+    currentUrl = url;
+    currentPattern = pattern;
+    showWordFilters();
     fetchResults(url, pattern, 0);
+});
+
+// For multi-word anagrams, words marked as definitely in the answer
+// (thumbs up) or not in it (thumbs down) are sent with every request.
+var included = [];
+var excluded = [];
+var searchKey = null;
+var currentUrl = null;
+var currentPattern = null;
+
+function isMultiAnagram(url) {
+    return url.indexOf("/multi-anagram?") !== -1;
+}
+
+function wordFilterParams(url) {
+    if (!isMultiAnagram(url)) {
+        return "";
+    }
+    return (included.length ? "&include=" + encodeURIComponent(included.join(",")) : "") +
+        (excluded.length ? "&exclude=" + encodeURIComponent(excluded.join(",")) : "");
+}
+
+function showWordFilters() {
+    var filters = $("#word-filters").empty();
+    function badges(label, words, list, cls) {
+        if (!words.length) {
+            return;
+        }
+        filters.append($("<span class='mr-1'/>").text(label));
+        words.forEach(function(word) {
+            var badge = $("<span class='badge mr-1'/>").addClass(cls).text(word + " ");
+            badge.append($("<a href='#' class='text-white' title='Remove'/>").html("&times;").click(function(e) {
+                e.preventDefault();
+                list.splice(list.indexOf(word), 1);
+                rerun();
+            }));
+            filters.append(badge);
+        });
+    }
+    badges("Must include:", included, included, "badge-success");
+    badges("Ruled out:", excluded, excluded, "badge-danger");
+    filters.toggle(included.length + excluded.length > 0);
+}
+
+function rerun() {
+    showWordFilters();
+    fetchResults(currentUrl, currentPattern, 0);
+}
+
+function markWord(word, action) {
+    [included, excluded].forEach(function(list) {
+        var i = list.indexOf(word);
+        if (i !== -1) {
+            list.splice(i, 1);
+        }
+    });
+    (action === "include" ? included : excluded).push(word);
+    rerun();
+}
+
+$("#results").on("click", ".word", function(e) {
+    e.stopPropagation();
+    var position = $(this).offset();
+    $("#word-menu").data("word", $(this).text())
+        .css({top: position.top + $(this).outerHeight() + 2, left: position.left}).show();
+});
+
+$("#word-menu").on("click", "button", function(e) {
+    e.stopPropagation();
+    var menu = $("#word-menu").hide();
+    var word = menu.data("word");
+    var action = $(this).data("action");
+    if (action === "look") {
+        window.open("http://www.google.com/search?q=" + encodeURIComponent(word), "_blank");
+    } else {
+        markWord(word, action);
+    }
+});
+
+$(document).on("click", function() {
+    $("#word-menu").hide();
+}).on("keydown", function(e) {
+    if (e.key === "Escape") {
+        $("#word-menu").hide();
+    }
 });
 
 // Multi-word anagrams can have far more matches than fit in one response,
@@ -99,7 +197,7 @@ function fetchResults(url, pattern, offset) {
     var spinner = $('<div/>').css({'margin-left': '10px', 'display': 'inline-block', 'vertical-align': 'middle'}).insertAfter($("#go")).preloader({src:'sprites.32.png'});
     $.ajax({
         type: "GET",
-        url: offset ? url + "&offset=" + offset : url,
+        url: (offset ? url + "&offset=" + offset : url) + wordFilterParams(url),
         accepts: "application/json",
         crossDomain: "true",
         success: function (data) {
@@ -111,7 +209,19 @@ function fetchResults(url, pattern, offset) {
             showCount(url, pattern, data);
             for (var i=0; i<matches.length; i++) {
                 var word = matches[i];
-                results.append("<li class='list-group-item'><a href='http://www.google.com/search?q="+encodeURIComponent(word)+"' target='_blank'>" + word + "</a></li>");
+                if (isMultiAnagram(url)) {
+                    // each word opens the thumbs up / thumbs down / look up menu
+                    var item = $("<li class='list-group-item'/>");
+                    word.split(" ").forEach(function(w, j) {
+                        if (j) {
+                            item.append(" ");
+                        }
+                        item.append($("<span class='word'/>").text(w).toggleClass("included", included.indexOf(w) !== -1));
+                    });
+                    results.append(item);
+                } else {
+                    results.append("<li class='list-group-item'><a href='http://www.google.com/search?q="+encodeURIComponent(word)+"' target='_blank'>" + word + "</a></li>");
+                }
             }
         },
         error: function (request, status, errorThrown) {
