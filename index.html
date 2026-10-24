@@ -20,9 +20,6 @@
         <input type="radio" name="querytype" value="anagram" autocomplete="off"> Anagram
       </label>
       <label class="btn btn-secondary">
-        <input type="radio" name="querytype" value="multi-anagram" autocomplete="off"> Multi-Anagram
-      </label>
-      <label class="btn btn-secondary">
         <input type="radio" name="querytype" value="pangram" autocomplete="off"> Pangram
       </label>
       <label class="btn btn-secondary">
@@ -33,9 +30,19 @@
     <form action="#">
       <div class="form-group">
         <input type="text" id="query" autofocus>
-        <input type="text" id="lengths" placeholder="word lengths, e.g. 5 4" size="18" style="display: none">
         <button  class="btn btn-primary btn-sm" id="go">Go</button>
         <button  class="btn btn-primary btn-sm" id="clear">X</button>
+      </div>
+      <div class="form-group form-inline" id="anagram-options" style="display: none">
+        <label for="word-count" class="mr-1">Words</label>
+        <select id="word-count" class="form-control form-control-sm mr-3">
+          <option>1</option><option>2</option><option>3</option><option>4</option>
+          <option>5</option><option>6</option><option>7</option><option>8</option>
+        </select>
+        <span id="lengths-group" style="display: none">
+          <span class="mr-1">Lengths</span>
+          <span id="lengths"></span>
+        </span>
       </div>
     </form>
     <div id="result-count" class="text-muted"></div>
@@ -50,6 +57,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
     <script src="js/jquery.preloaders.min.js"></script>
-    <script src="js/dict.js?v1.1"></script>
+    <script src="js/dict.js?v1.2"></script>
   </body>
 </html>
