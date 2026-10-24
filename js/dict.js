@@ -67,7 +67,23 @@ $("#word-count").change(updateLengths);
 $('input[name=querytype]').change(function(e) {
     $("#anagram-options").toggle(this.value === "anagram");
     updateLengths();
+    clearResults();
 });
+
+// Results from one mode don't mean anything in another, so switching modes
+// clears them (and drops any reply still on its way). Thumbs up/down words
+// are kept for when the same anagram is searched again.
+function clearResults() {
+    requestCount++;
+    currentUrl = null;
+    currentPattern = null;
+    lastResults = null;
+    $("#results").empty();
+    $("#result-count").text('');
+    $("#result-filter").val('').hide();
+    $("#word-menu").hide();
+    showWordFilters();
+}
 
 $("#query").on("input", function(e) {
     if (this.value.indexOf(" ") === -1) {
