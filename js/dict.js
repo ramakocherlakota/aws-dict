@@ -87,19 +87,28 @@ $("#go").click(function(e) {
         url = "https://obbe7hxsnb.execute-api.us-east-1.amazonaws.com/Prod/multi-anagram?pattern=" + encodeURIComponent(pattern) +
             "&lengths=" + encodeURIComponent(lengths.join(","));
     }
-    var spinner = $('<div/>').css({'margin-left': '10px', 'display': 'inline-block', 'vertical-align': 'middle'}).insertAfter(this).preloader({src:'sprites.32.png'});
+    fetchResults(url, pattern, 0);
+});
+
+// Multi-word anagrams can have far more matches than fit in one response,
+// so they come a page at a time; the count line links to the pages around it.
+// Matches the page size in the multi-anagram Lambda.
+var PAGE_SIZE = 1000;
+
+function fetchResults(url, pattern, offset) {
+    var spinner = $('<div/>').css({'margin-left': '10px', 'display': 'inline-block', 'vertical-align': 'middle'}).insertAfter($("#go")).preloader({src:'sprites.32.png'});
     $.ajax({
         type: "GET",
-        url: url,
+        url: offset ? url + "&offset=" + offset : url,
         accepts: "application/json",
         crossDomain: "true",
         success: function (data) {
             spinner.preloader('stop');
-            query.val(pattern);
+            $("#query").val(pattern);
             var results = $("#results");
             results.empty();
             var matches = data['matches'];
-            $("#result-count").text((data['truncated'] ? "First " : "") + matches.length + " result" + (matches.length === 1 ? "" : "s"));
+            showCount(url, pattern, data);
             for (var i=0; i<matches.length; i++) {
                 var word = matches[i];
                 results.append("<li class='list-group-item'><a href='http://www.google.com/search?q="+encodeURIComponent(word)+"' target='_blank'>" + word + "</a></li>");
@@ -115,5 +124,32 @@ $("#go").click(function(e) {
             }
             alert("An error was encountered " + message);
         }});
-});
+}
 
+function showCount(url, pattern, data) {
+    var count = $("#result-count").empty();
+    var n = data['matches'].length;
+    var offset = data['offset'] || 0;
+    var paged = offset > 0 || data['more'];
+    if (!paged) {
+        count.text(n + " result" + (n === 1 ? "" : "s"));
+    } else {
+        count.text("Results " + (n ? (offset + 1) + "\u2013" + (offset + n) : "none past " + offset));
+    }
+    function pageLink(text, newOffset) {
+        return $("<a href='#' class='ml-2'/>").text(text).click(function(e) {
+            e.preventDefault();
+            fetchResults(url, pattern, newOffset);
+            window.scrollTo(0, 0);
+        });
+    }
+    if (offset > 0) {
+        count.append(pageLink("\u2039 Previous " + PAGE_SIZE, Math.max(0, offset - PAGE_SIZE)));
+    }
+    if (data['more']) {
+        count.append(pageLink("Next " + PAGE_SIZE + " \u203a", offset + n));
+    }
+    if (data['timed_out']) {
+        count.append($("<span class='ml-2'/>").text("(the search ran out of time, so there may be more)"));
+    }
+}
