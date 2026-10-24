@@ -5,6 +5,7 @@ $("#clear").click(function(e) {
     included = [];
     excluded = [];
     showWordFilters();
+    $("#result-filter").val('').hide();
     updateLengths();
 });
 
@@ -115,13 +116,38 @@ function isMultiAnagram(url) {
     return url.indexOf("/multi-anagram?") !== -1;
 }
 
-function wordFilterParams(url) {
-    if (!isMultiAnagram(url)) {
-        return "";
-    }
-    return (included.length ? "&include=" + encodeURIComponent(included.join(",")) : "") +
-        (excluded.length ? "&exclude=" + encodeURIComponent(excluded.join(",")) : "");
+function isAnagram(url) {
+    return url.indexOf("/anagram?") !== -1 || isMultiAnagram(url);
 }
+
+function filterText() {
+    return $.trim($("#result-filter").val());
+}
+
+function wordFilterParams(url) {
+    var params = "";
+    if (isAnagram(url) && filterText()) {
+        params += "&filter=" + encodeURIComponent(filterText());
+    }
+    if (isMultiAnagram(url)) {
+        params += (included.length ? "&include=" + encodeURIComponent(included.join(",")) : "") +
+            (excluded.length ? "&exclude=" + encodeURIComponent(excluded.join(",")) : "");
+    }
+    return params;
+}
+
+// The filter box narrows anagram results on the server, so it covers every
+// page, not just the one showing. It reruns the search shortly after typing
+// stops.
+var filterTimer = null;
+$("#result-filter").on("input", function() {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(function() {
+        if (currentUrl && isAnagram(currentUrl)) {
+            fetchResults(currentUrl, currentPattern, 0);
+        }
+    }, 300);
+});
 
 function showWordFilters() {
     var filters = $("#word-filters").empty();
@@ -142,7 +168,8 @@ function showWordFilters() {
     }
     badges("Must include:", included, included, "badge-success");
     badges("Ruled out:", excluded, excluded, "badge-danger");
-    filters.toggle(included.length + excluded.length > 0);
+    // only multi-word anagram searches use them
+    filters.toggle(included.length + excluded.length > 0 && !!currentUrl && isMultiAnagram(currentUrl));
 }
 
 function rerun() {
@@ -193,7 +220,12 @@ $(document).on("click", function() {
 // Matches the page size in the multi-anagram Lambda.
 var PAGE_SIZE = 1000;
 
+// Responses can arrive out of order when the filter changes quickly; only
+// the latest request's results are shown.
+var requestCount = 0;
+
 function fetchResults(url, pattern, offset) {
+    var request = ++requestCount;
     var spinner = $('<div/>').css({'margin-left': '10px', 'display': 'inline-block', 'vertical-align': 'middle'}).insertAfter($("#go")).preloader({src:'sprites.32.png'});
     $.ajax({
         type: "GET",
@@ -202,7 +234,11 @@ function fetchResults(url, pattern, offset) {
         crossDomain: "true",
         success: function (data) {
             spinner.preloader('stop');
+            if (request !== requestCount) {
+                return;
+            }
             $("#query").val(pattern);
+            $("#result-filter").toggle(isAnagram(url));
             var results = $("#results");
             results.empty();
             var matches = data['matches'];
@@ -224,13 +260,16 @@ function fetchResults(url, pattern, offset) {
                 }
             }
         },
-        error: function (request, status, errorThrown) {
+        error: function (xhr, status, errorThrown) {
             // show an error message
             spinner.preloader('stop');
+            if (request !== requestCount) {
+                return;
+            }
             $("#result-count").text('');
             var message = errorThrown;
-            if (request.responseJSON && request.responseJSON.error && request.responseJSON.error.message) {
-                message = request.responseJSON.error.message;
+            if (xhr.responseJSON && xhr.responseJSON.error && xhr.responseJSON.error.message) {
+                message = xhr.responseJSON.error.message;
             }
             alert("An error was encountered " + message);
         }});
@@ -245,6 +284,9 @@ function showCount(url, pattern, data) {
         count.text(n + " result" + (n === 1 ? "" : "s"));
     } else {
         count.text("Results " + (n ? (offset + 1) + "\u2013" + (offset + n) : "none past " + offset));
+    }
+    if (isAnagram(url) && filterText()) {
+        count.append(document.createTextNode(" containing \u201c" + filterText() + "\u201d"));
     }
     function pageLink(text, newOffset) {
         return $("<a href='#' class='ml-2'/>").text(text).click(function(e) {
