@@ -1,12 +1,16 @@
 $("#clear").click(function(e) {
+    e.preventDefault();
     var query = $("#query");
     query.val('').focus();
     $("#result-count").text('');
+    $("#results").empty();
     included = [];
     excluded = [];
+    lastResults = null;
     showWordFilters();
     $("#result-filter").val('').hide();
     updateLengths();
+    saveState();
 });
 
 function letterCount() {
@@ -101,6 +105,7 @@ $("#go").click(function(e) {
     currentUrl = url;
     currentPattern = pattern;
     showWordFilters();
+    saveState();
     fetchResults(url, pattern, 0);
 });
 
@@ -174,6 +179,7 @@ function showWordFilters() {
 
 function rerun() {
     showWordFilters();
+    saveState();
     fetchResults(currentUrl, currentPattern, 0);
 }
 
@@ -238,27 +244,9 @@ function fetchResults(url, pattern, offset) {
                 return;
             }
             $("#query").val(pattern);
-            $("#result-filter").toggle(isAnagram(url));
-            var results = $("#results");
-            results.empty();
-            var matches = data['matches'];
-            showCount(url, pattern, data);
-            for (var i=0; i<matches.length; i++) {
-                var word = matches[i];
-                if (isMultiAnagram(url)) {
-                    // each word opens the thumbs up / thumbs down / look up menu
-                    var item = $("<li class='list-group-item'/>");
-                    word.split(" ").forEach(function(w, j) {
-                        if (j) {
-                            item.append(" ");
-                        }
-                        item.append($("<span class='word'/>").text(w).toggleClass("included", included.indexOf(w) !== -1));
-                    });
-                    results.append(item);
-                } else {
-                    results.append("<li class='list-group-item'><a href='http://www.google.com/search?q="+encodeURIComponent(word)+"' target='_blank'>" + word + "</a></li>");
-                }
-            }
+            lastResults = {url: url, pattern: pattern, data: data};
+            showResults(url, pattern, data);
+            saveState();
         },
         error: function (xhr, status, errorThrown) {
             // show an error message
@@ -273,6 +261,30 @@ function fetchResults(url, pattern, offset) {
             }
             alert("An error was encountered " + message);
         }});
+}
+
+function showResults(url, pattern, data) {
+    $("#result-filter").toggle(isAnagram(url));
+    var results = $("#results");
+    results.empty();
+    var matches = data['matches'];
+    showCount(url, pattern, data);
+    for (var i=0; i<matches.length; i++) {
+        var word = matches[i];
+        if (isMultiAnagram(url)) {
+            // each word opens the thumbs up / thumbs down / look up menu
+            var item = $("<li class='list-group-item'/>");
+            word.split(" ").forEach(function(w, j) {
+                if (j) {
+                    item.append(" ");
+                }
+                item.append($("<span class='word'/>").text(w).toggleClass("included", included.indexOf(w) !== -1));
+            });
+            results.append(item);
+        } else {
+            results.append("<li class='list-group-item'><a href='http://www.google.com/search?q="+encodeURIComponent(word)+"' target='_blank'>" + word + "</a></li>");
+        }
+    }
 }
 
 function showCount(url, pattern, data) {
@@ -305,3 +317,74 @@ function showCount(url, pattern, data) {
         count.append($("<span class='ml-2'/>").text("(the search ran out of time, so there may be more)"));
     }
 }
+
+// The page remembers its state between visits in this browser: the search
+// type, letters, word lengths, thumbs up/down words, filter and the last page
+// of results, which is shown again without a new request. Storage can be
+// unavailable (private windows, blocked site data), so every access is
+// guarded and the page works the same without it.
+var STORAGE_KEY = "dict-state";
+var lastResults = null;
+
+function saveState() {
+    var state = {
+        querytype: $('input[name=querytype]:checked').val(),
+        query: $("#query").val(),
+        wordCount: $("#word-count").val(),
+        lengths: $("#lengths select").map(function() { return $(this).val(); }).get(),
+        included: included,
+        excluded: excluded,
+        searchKey: searchKey,
+        filter: $("#result-filter").val(),
+        currentUrl: currentUrl,
+        currentPattern: currentPattern,
+        lastResults: lastResults
+    };
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+        // not saved; nothing else depends on it
+    }
+}
+
+function restoreState() {
+    var state = null;
+    try {
+        state = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    } catch (e) {
+        state = null;
+    }
+    if (!state) {
+        return;
+    }
+    var radio = $('input[name=querytype]').filter(function() { return this.value === state.querytype; });
+    if (radio.length) {
+        $('input[name=querytype]').prop("checked", false).parent().removeClass("active");
+        radio.prop("checked", true).parent().addClass("active");
+        $("#anagram-options").toggle(state.querytype === "anagram");
+    }
+    $("#query").val(state.query || "");
+    $("#word-count").val(state.wordCount || "1");
+    updateLengths();
+    // each length limits the ones after it, so set them one at a time
+    (state.lengths || []).slice(0, -1).forEach(function(n, i) {
+        $("#lengths select").eq(i).val(n);
+        updateLengths();
+    });
+    included = state.included || [];
+    excluded = state.excluded || [];
+    searchKey = state.searchKey || null;
+    currentUrl = state.currentUrl || null;
+    currentPattern = state.currentPattern || null;
+    $("#result-filter").val(state.filter || "");
+    showWordFilters();
+    if (state.lastResults) {
+        lastResults = state.lastResults;
+        showResults(lastResults.url, lastResults.pattern, lastResults.data);
+    }
+}
+
+// saved after each control's own handlers have run
+$(document).on("input change", "#query, #word-count, #lengths select, input[name=querytype], #result-filter", saveState);
+
+restoreState();
