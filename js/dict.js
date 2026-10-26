@@ -69,6 +69,8 @@ $('input[name=querytype]').change(function(e) {
     $("#anagram-options").toggle(this.value === "anagram");
     updateLengths();
     clearResults();
+    // after Bootstrap's button handling, which would otherwise keep focus
+    setTimeout(function() { $("#query").focus(); }, 0);
 });
 
 // Results from one mode don't mean anything in another, so switching modes
